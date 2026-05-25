@@ -20,6 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
         listaArquivos.innerHTML = '';
 
         const arquivos = Array.from(inputArquivos.files);
+   // LIMITE DE ARQUIVOS
+   if (arquivos.length > 3) {
+   
+       alert('Você pode enviar no máximo 3 arquivos PDF.');
+   
+       inputArquivos.value = '';
+       listaArquivos.innerHTML = '';
+   
+       return;
+   }       
 
         if (arquivos.length === 0) {
             return;
