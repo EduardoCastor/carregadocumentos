@@ -1,52 +1,13 @@
 /* ═══════════════════════════════════════════════════════
-   AGENDA + CANCELAMENTO — script.js
+   CARREGA DOCUMENTOS — script.js
 ═══════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // ════════════════════════════════════════════════════
-    // ABAS — NAVEGAÇÃO
-    // ════════════════════════════════════════════════════
-    const tabs = document.querySelectorAll('.tab');
-    const panels = document.querySelectorAll('.view-panel');
-
-    function switchTab(targetTab) {
-        tabs.forEach(t => t.classList.remove('active'));
-        panels.forEach(p => {
-            p.classList.remove('active');
-            p.style.display = 'none';
-        });
-
-        const activeTab = document.querySelector(`.tab[data-tab="${targetTab}"]`);
-        const activePanel = document.getElementById(`panel${capitalize(targetTab)}`);
-
-        activeTab.classList.add('active');
-        activePanel.style.display = 'block';
-
-        // força reflow para a transição funcionar
-        void activePanel.offsetWidth;
-        activePanel.classList.add('active');
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function capitalize(s) {
-        return s.charAt(0).toUpperCase() + s.slice(1);
-    }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
-
-    // init: mostra só o painel ativo
-    panels.forEach(p => {
-        if (!p.classList.contains('active')) p.style.display = 'none';
-    });
-
-    // ════════════════════════════════════════════════════
     // CONSTANTES COMPARTILHADAS
     // ════════════════════════════════════════════════════
-    const BASE_URL = 'https://n8n.srv1352561.hstgr.cloud/webhook';
+    const BASE_URL = 'https://n8n.srv1352561.hstgr.cloud/webhook-test/carregadocumentos';
 
     const FERIADOS = [
         '2026-01-01', '2026-04-21', '2026-04-23', '2026-04-24',
@@ -76,11 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ════════════════════════════════════════════════════
-    // AGENDAMENTO
+    // CARREGAR
     // ════════════════════════════════════════════════════
-    const formAgenda = document.getElementById('formAgenda');
-    const successAgenda = document.getElementById('successAgenda');
-    const selectHor = document.getElementById('horarios');
+    const formCarregaDocumentos = document.getElementById('formCarregaDocumentos');
+    const nome = document.getElementById('nome');
+    const celular = document.getElementById('celular');
+    const celular = document.getElementById('celular');
+    const cpf = document.getElementById('cpf');
     const inputData = document.getElementById('data');
     const btnAgendar = document.getElementById('btnAgendar');
 
