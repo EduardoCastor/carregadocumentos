@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ELEMENTOS
     const form = document.getElementById('formCarregaDocumentos');
-    const btnEnviar = document.getElementById('btnEnviar');
+    const btnEnviar = document.getElementById('btnCarregar');
     const inputArquivos = document.getElementById('documentos');
     const listaArquivos = document.getElementById('listaArquivos');
     const successBox = document.getElementById('successAgenda');
