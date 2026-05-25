@@ -1,207 +1,128 @@
 /* ═══════════════════════════════════════════════════════
-   CARREGA DOCUMENTOS — script.js
+   ENVIO DE DOCUMENTOS — script.js
 ═══════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ════════════════════════════════════════════════════
-    // CONSTANTES COMPARTILHADAS
-    // ════════════════════════════════════════════════════
-    const BASE_URL = 'https://n8n.srv1352561.hstgr.cloud/webhook-test/carregadocumentos';
+    // URL DO WEBHOOK N8N
+    const WEBHOOK_URL = 'https://n8n.srv1352561.hstgr.cloud/webhook-test/carregadocumentos';
 
-    const FERIADOS = [
-        '2026-01-01', '2026-04-21', '2026-04-23', '2026-04-24',
-        '2026-05-01', '2026-06-04', '2026-06-05', '2026-09-07',
-        '2026-10-12', '2026-11-02', '2026-11-13', '2026-11-20', '2026-12-25',
-    ];
-    const DIAS_BLOQUEADOS = [0, 3, 6]; // Dom, Qua, Sáb
+    // ELEMENTOS
+    const form = document.getElementById('formCarregaDocumentos');
+    const btnEnviar = document.getElementById('btnEnviar');
+    const inputArquivos = document.getElementById('documentos');
+    const listaArquivos = document.getElementById('listaArquivos');
+    const successBox = document.getElementById('successAgenda');
 
-    function toISO(d) {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
+    // LISTAR ARQUIVOS SELECIONADOS
+    inputArquivos.addEventListener('change', () => {
 
-    function isDiaUtil(d) {
-        return !DIAS_BLOQUEADOS.includes(d.getDay()) && !FERIADOS.includes(toISO(d));
-    }
+        listaArquivos.innerHTML = '';
 
-    function proximoDiaUtil(base = new Date()) {
-        const d = new Date(base);
-        do { d.setDate(d.getDate() + 1); } while (!isDiaUtil(d));
-        return d;
-    }
+        const arquivos = Array.from(inputArquivos.files);
 
-    function addDiasUteis(base, n) {
-        const d = new Date(base); let c = 0;
-        while (c < n) { d.setDate(d.getDate() + 1); if (isDiaUtil(d)) c++; }
-        return d;
-    }
+        if (arquivos.length === 0) {
+            return;
+        }
 
-    // ════════════════════════════════════════════════════
-    // CARREGAR
-    // ════════════════════════════════════════════════════
-    const formCarregaDocumentos = document.getElementById('formCarregaDocumentos');
-    const nome = document.getElementById('nome');
-    const celular = document.getElementById('celular');
-    const celular = document.getElementById('celular');
-    const cpf = document.getElementById('cpf');
-    const inputData = document.getElementById('data');
-    const btnAgendar = document.getElementById('btnAgendar');
+        arquivos.forEach((arquivo, index) => {
 
-    function configurarCalendario() {
-        let hoje = new Date();
-        if (hoje.getHours() >= 16) hoje.setDate(hoje.getDate() + 1);
-        hoje.setHours(0, 0, 0, 0);
+            const item = document.createElement('div');
+            item.className = 'arquivo-item';
 
-        const minDate = proximoDiaUtil(hoje);
-        const maxDate = addDiasUteis(hoje, 5);
+            item.innerHTML = `
+                <strong>${index + 1}.</strong>
+                ${arquivo.name}
+                <span>(${formatarTamanho(arquivo.size)})</span>
+            `;
 
-        inputData.min = toISO(minDate);
-        inputData.max = toISO(maxDate);
-        inputData.value = toISO(minDate);
-    }
+            listaArquivos.appendChild(item);
+        });
+    });
 
-    async function carregarHorarios() {
-        const dataSel = inputData.value;
-        if (!dataSel) return;
+    // ENVIO DO FORMULÁRIO
+    form.addEventListener('submit', async (e) => {
 
-        selectHor.innerHTML = '<option value="">Carregando...</option>';
-        btnAgendar.disabled = true;
+        e.preventDefault();
+
+        const arquivos = Array.from(inputArquivos.files);
+
+        if (arquivos.length === 0) {
+            alert('Selecione pelo menos um arquivo PDF.');
+            return;
+        }
+
+        // VALIDAÇÃO DE PDFs
+        const arquivosInvalidos = arquivos.filter(file => file.type !== 'application/pdf');
+
+        if (arquivosInvalidos.length > 0) {
+            alert('Todos os arquivos devem estar em formato PDF.');
+            return;
+        }
+
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = 'Enviando documentos...';
 
         try {
-            const res = await fetch(`${BASE_URL}/disponibilidade?data=${dataSel}`);
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            const slots = data.slots || data;
 
-            if (!slots || slots.length === 0) {
-                selectHor.innerHTML = '<option value="">Sem horários disponíveis</option>';
-                return;
+            const formData = new FormData();
+
+            // CAMPOS DO FORMULÁRIO
+            formData.append('numprocesso', document.getElementById('numprocesso').value);
+            formData.append('nome', document.getElementById('nome').value);
+            formData.append('celular', document.getElementById('celular').value);
+            formData.append('cpf', document.getElementById('cpf').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('tipo_atendimento', document.getElementById('tipo_atendimento').value);
+
+            // ARQUIVOS
+            arquivos.forEach(file => {
+                formData.append('documentos', file);
+            });
+
+            // ENVIO PARA O N8N
+            const response = await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro no envio');
             }
 
-            selectHor.innerHTML = '<option value="">Selecione o horário</option>';
-            slots.forEach(slot => {
-                const o = document.createElement('option');
-                o.value = slot.inicio;
-                o.textContent = slot.hora;
-                selectHor.appendChild(o);
-            });
-        } catch {
-            selectHor.innerHTML = '<option value="">Erro ao carregar horários</option>';
-        }
-    }
+            form.style.display = 'none';
+            successBox.classList.remove('hidden');
 
-    selectHor.addEventListener('change', () => {
-        btnAgendar.disabled = !selectHor.value;
-    });
+        } catch (error) {
 
-    inputData.addEventListener('change', () => {
-        const d = new Date(inputData.value + 'T00:00:00');
-        if (!isDiaUtil(d)) {
-            alert('Não há atendimento nesse dia. Selecione um dia útil.');
-            inputData.value = toISO(proximoDiaUtil(d));
-        }
-        carregarHorarios();
-    });
+            console.error(error);
+            alert('Erro ao enviar os documentos. Tente novamente.');
 
-    formAgenda.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        } finally {
 
-        const dados = Object.fromEntries(new FormData(formAgenda));
-        const inicio = selectHor.value;
-
-        if (!inicio) { alert('Selecione um horário.'); return; }
-
-        btnAgendar.disabled = true;
-        btnAgendar.innerHTML = 'Agendando...';
-
-        try {
-            const res = await fetch(`${BASE_URL}/agendar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...dados, inicio }),
-            });
-            if (!res.ok) throw new Error();
-
-            formAgenda.style.display = 'none';
-            successAgenda.classList.remove('hidden');
-        } catch {
-            alert('Erro ao agendar. Tente novamente.');
-            btnAgendar.disabled = false;
-            btnAgendar.innerHTML = `
-        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Agendar Atendimento
-      `;
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = 'Enviar Documentos';
         }
     });
 
-    // reset para novo agendamento
-    window.resetAgenda = function () {
-        formAgenda.reset();
-        formAgenda.style.display = '';
-        successAgenda.classList.add('hidden');
-        btnAgendar.disabled = true;
-        btnAgendar.innerHTML = `
-      <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      Agendar Atendimento
-    `;
-        configurarCalendario();
-        carregarHorarios();
+    // RESET
+    window.resetFormulario = function () {
+
+        form.reset();
+        form.style.display = 'block';
+
+        listaArquivos.innerHTML = '';
+
+        successBox.classList.add('hidden');
     };
 
-    // init agendamento
-    configurarCalendario();
-    carregarHorarios();
+    // FORMATAR TAMANHO
+    function formatarTamanho(bytes) {
 
-    // ════════════════════════════════════════════════════
-    // CANCELAMENTO
-    // ════════════════════════════════════════════════════
-    const formCancel = document.getElementById('formCancel');
-    const protocoloEl = document.getElementById('protocolo');
-    const feedbackEl = document.getElementById('feedbackCancel');
-    const WEBHOOK_CANCEL = `${BASE_URL}/cancelar`;
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 
-    // só números
-    protocoloEl.addEventListener('input', () => {
-        protocoloEl.value = protocoloEl.value.replace(/[^0-9]/g, '');
-    });
-
-    formCancel.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const protocolo = protocoloEl.value.trim();
-        if (!protocolo) { alert('Informe o número do protocolo.'); return; }
-
-        const btnCancelar = document.getElementById('btnCancelar');
-        btnCancelar.disabled = true;
-        btnCancelar.innerHTML = 'Processando...';
-
-        feedbackEl.classList.add('hidden');
-        feedbackEl.className = 'feedback-cancel hidden';
-
-        try {
-            const res = await fetch(WEBHOOK_CANCEL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ protocolo }),
-            });
-            if (!res.ok) throw new Error();
-
-            feedbackEl.textContent = '✅ Cancelamento realizado com sucesso!';
-            feedbackEl.className = 'feedback-cancel success';
-            feedbackEl.classList.remove('hidden');
-            formCancel.reset();
-
-        } catch {
-            feedbackEl.textContent = '❌ Não foi possível cancelar. Verifique o protocolo ou tente novamente.';
-            feedbackEl.className = 'feedback-cancel error';
-            feedbackEl.classList.remove('hidden');
-        } finally {
-            btnCancelar.disabled = false;
-            btnCancelar.innerHTML = `
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        Cancelar Agendamento
-      `;
-        }
-    });
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
 
 });
