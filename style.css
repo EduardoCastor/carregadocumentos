@@ -65,6 +65,7 @@ header {
 .header-middle {
     flex: 1;
     text-align: center;
+    display: flex;
     padding: 0 24px;
 }
 
